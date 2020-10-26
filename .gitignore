@@ -1,0 +1,9 @@
+# Input/Output Folders
+input*/
+output*/
+
+# Mac
+.DS_Store
+
+# IDE
+*.code-workspace
