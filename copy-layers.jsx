@@ -2,11 +2,7 @@
 // Process a folder of sticker pack images.
 // - Resize the files
 // - Save as PSD
-// - Create versions of each file using templates
-// - 1. Plain image
-// - 2. Image with label "I Love {XYZ}"
-// - 3. Image with label "I Was Here"
-// - 4. Image with label
+// - Create versions of each file using visible layers in a template
 
 // ====================================================================
 // LICENSE
@@ -50,26 +46,36 @@
 #target photoshop
 app.bringToFront()
 
-function copyLayer(outputFolder, templateFile, layerName) {
-    var fileWithLabel = open(templateFile)
-    var layers = fileWithLabel.layers
-    layerSet = layers.getByName(layerName)
-    // Loop files and add layer
-    var fileList = outputFolder.getFiles()
+function copyPSDFolder(inputFolder, outputFolder, psdSaveOptions) {
+    var fileList = inputFolder.getFiles()
     for(var i=0; i<fileList.length; i++) {
         filePath = fileList[i]
         if (filePath instanceof File && (filePath.name.match(/\.psd$/i)) && filePath.hidden == false) { 
-            var targetFile = open(filePath)
-            app.activeDocument = fileWithLabel
-            duplicateLayerSet = layerSet.duplicate( targetFile, ElementPlacement.PLACEATBEGINNING )
+            var inputFile = open(filePath)
+            var outputFile = new File (decodeURI (outputFolder) + "/" + filePath.name)
+            inputFile.saveAs(outputFile, psdSaveOptions, false, Extension.LOWERCASE)
+            inputFile.close (SaveOptions.DONOTSAVECHANGES)
+        }
+    }
+}
+
+function copyLayer(outputFolder, inputFile, inputLayer) {
+    var targetList = outputFolder.getFiles()
+    for(var i=0; i<targetList.length; i++) {
+        targetPath = targetList[i]
+        // Copy input layer to output file only if the output file is a PSD file and not hidden
+        if (filePath instanceof File && (filePath.name.match(/\.psd$/i)) && filePath.hidden == false) { 
+            var targetFile = open(targetPath)
+            app.activeDocument = inputFile
+            duplicateLayerSet = inputLayer.duplicate( targetFile, ElementPlacement.PLACEATBEGINNING )
             app.activeDocument = targetFile
             targetFile.save()
             targetFile.close()
         }
     }
-    app.activeDocument = fileWithLabel
-    fileWithLabel.close()
+    app.activeDocument = inputFile
 }
+    
 
 function setLabelToFilename(outputFolder, layerName) {
     var fileList = outputFolder.getFiles()
@@ -119,14 +125,21 @@ try {
     var scriptPath = scriptFile.parent.fsName
 
     // Set input folder
-    var inputFolder = Folder(scriptPath + '/input')
+    var inputFolder = Folder(scriptPath + '/input/images')
 
     // Set output folders
+    var outputFolder = Folder(scriptPath + '/output')
     var outputFolderPlain = Folder(scriptPath + '/output/psd-plain')
-    var outputFolderLabel = Folder(scriptPath + '/output/psd-label')
-    var outputFolderLogo1 = Folder(scriptPath + '/output/psd-logo-1')
-    var outputFolderLogo2 = Folder(scriptPath + '/output/psd-logo-2')
     var outputFolderPNG = Folder(scriptPath + '/output/png')
+
+    // Create output folders that don't exist
+    folders = [outputFolder, outputFolderPlain, outputFolderPNG]
+    for (index in folders) {
+        folder = folders[index]
+        if (!folder.exists) {
+            folder.create()
+        }
+    }  
 
     // ====================================================================
     // Set PSD output file save options
@@ -164,45 +177,44 @@ try {
     }
 
     // ====================================================================
-    // Visit each plain copy and create copies for each folder
-    // ====================================================================
-    var doCopyPlain = true
-    if (doCopyPlain) {
-        var fileList = outputFolderPlain.getFiles()
-        for(var i=0; i<fileList.length; i++) {
-            filePath = fileList[i]
-            if (filePath instanceof File && (filePath.name.match(/\.psd$/i)) && filePath.hidden == false) { 
-                var plainFile = open(filePath)
-
-                var labelFile = new File (decodeURI (outputFolderLabel) + "/" + filePath.name)
-                var logo1File = new File (decodeURI (outputFolderLogo1) + "/" + filePath.name)
-                var logo2File = new File (decodeURI (outputFolderLogo2) + "/" + filePath.name)
-
-                plainFile.saveAs(labelFile, psdSaveOptions, false, Extension.LOWERCASE)
-                plainFile.saveAs(logo1File, psdSaveOptions, false, Extension.LOWERCASE)
-                plainFile.saveAs(logo2File, psdSaveOptions, false, Extension.LOWERCASE)
-
-                plainFile.close (SaveOptions.DONOTSAVECHANGES)
-            }
-        }
-    }
-
-    // ====================================================================
     // Copy layers. Change the label layer to the name of the file.
     // ====================================================================
     var doCopy = true
     if (doCopy) {
         // Get label template and text layer
         var templateFile = File(scriptPath + '/input/layers/layers.psd')
-        var layerName = "label"
-        copyLayer(outputFolderLabel, templateFile, layerName)
-        setLabelToFilename(outputFolderLabel, layerName)
-        var layerName = "logo1"
-        copyLayer(outputFolderLogo1, templateFile, layerName)
-        var layerName = "logo2"
-        copyLayer(outputFolderLogo2, templateFile, layerName)
+        var layerFile = open(templateFile)
+        var layers = layerFile.layers
+        var len = layers.length
+
+        for (var i = 0; i < len; i++) {
+            var layer = layers[i]
+            var layerName = layer.name
+            if (layer.visible) {
+                var layer_num = i + 1
+                var outputFolder = Folder(scriptPath + '/output/psd-layer-'+layer_num)
+
+                // Create folder if not exists
+                if (!outputFolder.exists) {
+                    outputFolder.create()
+                }
+
+                // Copy source PSD files to the output folder
+                copyPSDFolder(outputFolderPlain, outputFolder, psdSaveOptions)
+
+                // Copy layers
+                copyLayer(outputFolder, layerFile, layer)
+            }
+        }
+        layerFile.save()
+        layerFile.close()
     }
+
+    // ====================================================================
+    // Notify end user that we have finished.
+    // ====================================================================
     alert('Done')
+
 } catch (exception) {
     // Show debug message and then quit
     if ((exception != null) && (exception != ""))
