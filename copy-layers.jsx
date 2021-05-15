@@ -77,30 +77,58 @@ function copyLayer(outputFolder, inputFile, inputLayer) {
 }
     
 
-function setLabelToFilename(outputFolder, layerName) {
-    var fileList = outputFolder.getFiles()
-    for(var i=0; i<fileList.length; i++) {
-        filePath = fileList[i]
-        if (filePath instanceof File && (filePath.name.match(/\.psd$/i)) && filePath.hidden == false) { 
-            var baseName = filePath.name.split('.')[0]
-            baseName = decodeURI(baseName)
-            var fileWithLabel = open(filePath)
-            var layers = fileWithLabel.layers
-            layerSet = layers.getByName(layerName);
-            var setLayers = layerSet.layers
-            var numLabelLayers = setLayers.length
-            for(var j=0; j<numLabelLayers; j++) {
-                var setLayer = setLayers[j]
-                var setLayerName = setLayer.name
-                if (setLayer.kind == "LayerKind.TEXT") {
-                    var newText = baseName
-                    var textItemRef = setLayer.textItem
-                    textItemRef.contents = newText
+function setLabelToFilename(outputFolder, labelLayerName) {
+    var subFolderList = outputFolder.getFiles()
+    //alert('subFolderList: ' + subFolderList)
+    // Loop through the subfolders in the output folder
+    for(var i=0; i<subFolderList.length; i++) {
+        //alert('i')
+        filePath = subFolderList[i]
+        if (filePath instanceof Folder) { 
+            var subFolderFiles = filePath.getFiles()
+            // Loop through the files in the subfolder
+            for(var j=0; j<subFolderFiles.length; j++) {
+                //alert('j')
+                subFolderFilePath = subFolderFiles[j]
+                // Copy input layer to output file only if the output file is a PSD file and not hidden
+                if (subFolderFilePath instanceof File && (subFolderFilePath.name.match(/\.psd$/i)) && subFolderFilePath.hidden == false) { 
+                    var subFolderFile = open(subFolderFilePath)
+                    //alert(subFolderFile)
+                    var baseName = subFolderFile.name.split('.')[0]
+                    baseName = decodeURI(baseName)
+                    var layers = subFolderFile.layers
+                    var numLayers = layers.length
+                    // Loop through the layers in the file
+                    for(var k=0; k<numLayers; k++) {
+                        //alert('k')
+                        layer = layers[k]
+                        layerName = layer.name
+                        //alert('layerName: ' + layerName)
+                        if (layerName == labelLayerName) {
+                            //alert('Found layer matching "labelLayerName" argument: ' + layerName)
+                            var setLayers = layer.layers
+                            var numLabelLayers = setLayers.length
+                            // Loop through the sub-layers in the layer
+                            for(var m=0; m<numLabelLayers; m++) {
+                                //alert('m')
+                                var setLayer = setLayers[m]
+                                var setLayerName = setLayer.name
+                                //alert('setLayerName: ' + setLayerName)
+                                if (setLayer.kind == "LayerKind.TEXT") {
+                                    var newText = baseName
+                                    //alert('newText: ' + newText)
+                                    var textItemRef = setLayer.textItem
+                                    textItemRef.contents = newText
+                                    subFolderFile.save()
+                                }
+                            }
+                        }
+                    }
+                    subFolderFile.close()
                 }
             }
-            fileWithLabel.save()
-            fileWithLabel.close()
         }
+
     }
 }
 
@@ -192,23 +220,29 @@ try {
             var layerName = layer.name
             if (layer.visible) {
                 var layer_num = i + 1
-                var outputFolder = Folder(scriptPath + '/output/psd-layer-'+layer_num)
+                var outputSubFolder = Folder(scriptPath + '/output/psd-layer-'+layer_num)
 
                 // Create folder if not exists
-                if (!outputFolder.exists) {
-                    outputFolder.create()
+                if (!outputSubFolder.exists) {
+                    outputSubFolder.create()
                 }
 
                 // Copy source PSD files to the output folder
-                copyPSDFolder(outputFolderPlain, outputFolder, psdSaveOptions)
+                copyPSDFolder(outputFolderPlain, outputSubFolder, psdSaveOptions)
 
                 // Copy layers
-                copyLayer(outputFolder, layerFile, layer)
+                copyLayer(outputSubFolder, layerFile, layer)
             }
         }
         layerFile.save()
         layerFile.close()
     }
+
+    // ====================================================================
+    // Change the text value in any label layer to the name of the file
+    // ====================================================================
+    labelLayerName = 'label'
+    setLabelToFilename(outputFolder, labelLayerName)
 
     // ====================================================================
     // Notify end user that we have finished.
