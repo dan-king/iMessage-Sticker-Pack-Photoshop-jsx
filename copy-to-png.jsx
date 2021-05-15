@@ -58,9 +58,9 @@ function copyLayer(inputFolderLabel, prefix, outputFolderPNG) {
             var inputDocument = open (filePath)
             var baseName = filePath.name.split('.')[0]
             // Uncomment to begin new filename with the original name
-            //var outputFile = new File (decodeURI (outputFolderPNG) + "/" + baseName + "_" + prefix +  ".png")
+            var outputFile = new File (decodeURI (outputFolderPNG) + "/" + baseName + "_" + prefix +  ".png")
             // Uncomment to begin filename with the prefix
-            var outputFile = new File (decodeURI (outputFolderPNG) + "/" + prefix + "_" + baseName +  ".png")
+            //var outputFile = new File (decodeURI (outputFolderPNG) + "/" + prefix + "_" + baseName +  ".png")
             inputDocument.exportDocument (outputFile, ExportType.SAVEFORWEB, exportOptions)
             inputDocument.close (SaveOptions.DONOTSAVECHANGES)
         }
@@ -73,24 +73,15 @@ try {
 
     // Set output folders
     var outputFolderPNG = Folder(scriptPath + '/output/png')
+    var outputFolder = Folder(scriptPath + '/output')
+    var subFolderList = outputFolder.getFiles()
 
-    // Set input folders and run
-    var inputFolder = Folder(scriptPath + '/output/psd-logo-1')
-    var prefix = 'I Heart'
-    copyLayer(inputFolder, prefix, outputFolderPNG)
-
-    var inputFolder = Folder(scriptPath + '/output/psd-label')
-    var prefix = 'Label'
-    copyLayer(inputFolder, prefix, outputFolderPNG)
-
-    var inputFolder = Folder(scriptPath + '/output/psd-logo-2')
-    var prefix = 'I Was Here'
-    copyLayer(inputFolder, prefix, outputFolderPNG)
-
-    var inputFolder = Folder(scriptPath + '/output/psd-plain')
-    var prefix = 'Picture'
-    copyLayer(inputFolder, prefix, outputFolderPNG)
-
+    // Loop through the subfolders in the output folder
+    for(var i=0; i<subFolderList.length; i++) {
+        var subFolder = subFolderList[i]
+        var prefix = 'group_' + i
+        copyLayer(subFolder, prefix, outputFolderPNG)
+    }
     alert('Done')
 } catch (exception) {
     // Show debug message and then quit
