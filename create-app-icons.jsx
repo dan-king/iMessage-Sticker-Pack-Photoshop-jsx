@@ -60,6 +60,12 @@ function create_icons(inputFilePath, icons, outputFolder){
     // Do not include metadata in output
     inputFile.info = null
 
+    // Set PNG output file save options
+    exportOptions = new ExportOptionsSaveForWeb()
+    exportOptions.format = SaveDocumentType.PNG
+    exportOptions.PNG8 = false // use PNG-24
+    exportOptions.transparency = true
+    
     for (i = 0; i < icons.length; i++) {
         var icon = icons[i]
         var outputFile = File(outputFolder + "/" + icon.name)
@@ -80,6 +86,9 @@ try {
 
     // Set output folder
     var outputFolder = Folder(scriptPath + '/output/app-icons')
+    if (!outputFolder.exists) {
+        outputFolder.create()
+    }
 
     // Set input files
     var inputFileSquarePath = File (decodeURI (inputFolder) + "/1024.png")
@@ -87,12 +96,6 @@ try {
 
     // Specify 'pixels' as the unit
     app.preferences.rulerUnits = Units.PIXELS
-
-    // Set PNG output file save options
-    exportOptions = new ExportOptionsSaveForWeb()
-    exportOptions.format = SaveDocumentType.PNG
-    exportOptions.PNG8 = false // use PNG-24
-    exportOptions.transparency = true
 
     // =====================================================
     // Process square icons
