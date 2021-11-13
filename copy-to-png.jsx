@@ -79,8 +79,10 @@ try {
     // Loop through the subfolders in the output folder
     for(var i=0; i<subFolderList.length; i++) {
         var subFolder = subFolderList[i]
-        var prefix = 'group_' + i
-        copyLayer(subFolder, prefix, outputFolderPNG)
+        if (subFolder instanceof Folder) { 
+            var prefix = 'group_' + i
+            copyLayer(subFolder, prefix, outputFolderPNG)
+        }
     }
     alert('Done')
 } catch (exception) {
